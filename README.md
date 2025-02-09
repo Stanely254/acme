@@ -10,7 +10,6 @@ A Flutter-based task management application with offline-first capabilities, imp
 - Conflict resolution for cross-device updates
 - Clean and intuitive user interface
 - Optimistic UI updates
-- Firebase Authentication
 
 ## Architecture
 
