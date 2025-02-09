@@ -18,7 +18,6 @@ A Flutter-based task management application with offline-first capabilities, imp
 - **Hive**: Local data persistence
 - **Firebase Firestore**: Cloud synchronization
 - **Provider**: State management
-- **Firebase Auth**: User authentication
 
 ### Key Components
 - **Repository Pattern**: Abstracts data operations
