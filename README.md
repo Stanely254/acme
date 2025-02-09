@@ -1,4 +1,4 @@
-# Task Management App
+# Task Management App: Acme
 
 A Flutter-based task management application with offline-first capabilities, implementing real-time synchronization between local storage (Hive) and Firebase.
 
