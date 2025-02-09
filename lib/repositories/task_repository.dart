@@ -38,4 +38,20 @@ abstract class TaskRepository {
   /// Returns a [Stream] that emits a list of [Task] objects whenever
   /// there is a change in the repository.
   Stream<List<Task>> watchTasks();
+
+  /// Synchronizes the local data with Firebase.
+  ///
+  /// This method ensures that any changes made locally are reflected in the
+  /// Firebase database and vice versa. It handles the necessary logic to
+  /// merge, update, or delete data as required to keep both the local and
+  /// remote data in sync.
+  ///
+  /// Throws:
+  /// - [FirebaseException] if there is an error during the synchronization process.
+  ///
+  /// Example usage:
+  /// ```dart
+  /// await taskRepository.syncWithFirebase();
+  /// ```
+  Future<void> syncWithFirebase();
 }

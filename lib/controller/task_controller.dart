@@ -5,18 +5,18 @@ import '../models/tasks.dart';
 import '../repositories/task_repository.dart';
 
 /// A controller class for managing tasks, extending [ChangeNotifier].
-/// 
+///
 /// This class handles the loading, adding, updating, and deleting of tasks
 /// using a [TaskRepository]. It also provides error handling and state
 /// management for the task list.
-/// 
+///
 /// The [TaskController] constructor requires a [TaskRepository] instance.
-/// 
+///
 /// Properties:
 /// - `tasks`: A list of [Task] objects.
 /// - `isLoading`: A boolean indicating if tasks are currently being loaded.
 /// - `error`: An optional error message string.
-/// 
+///
 /// Methods:
 /// - `_loadTasks()`: Loads all tasks from the repository and updates the state.
 /// - `addTask(String title, String description)`: Adds a new task with the given title and description.
@@ -29,6 +29,7 @@ class TaskController extends ChangeNotifier {
   List<Task> _tasks = [];
   bool _isLoading = false;
   String? _error;
+  bool _isSyncing = false;
 
   TaskController(this._repository) {
     _loadTasks();
@@ -115,5 +116,23 @@ class TaskController extends ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  Future<void> syncWithFirebase() async {
+    if (_isSyncing) return;
+
+    _isSyncing = true;
+    notifyListeners();
+
+    try {
+      await _repository.syncWithFirebase();
+      await _loadTasks();
+    } catch (e) {
+      _error = e.toString();
+      rethrow;
+    } finally {
+      _isSyncing = false;
+      notifyListeners();
+    }
   }
 }

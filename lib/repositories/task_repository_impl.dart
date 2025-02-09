@@ -9,25 +9,30 @@ import 'package:http/http.dart' as http;
 import '../models/tasks.dart';
 import 'task_repository.dart';
 
-/// Implementation of the TaskRepository interface.
+/// Implementation of the TaskRepository interface that provides methods
+/// for managing tasks locally using a Hive box and syncing with Firebase Firestore.
 ///
-/// This class provides methods to perform CRUD operations on tasks,
-/// both locally using a Hive box and remotely using Firestore.
+/// This class handles CRUD operations for tasks, including adding, updating,
+/// deleting, and retrieving tasks. It also provides methods for syncing tasks
+/// with Firebase Firestore and resolving conflicts between local and remote tasks.
+///
+/// The class uses a Hive box to store tasks locally and Firebase Firestore
+/// to store tasks remotely. It includes methods for checking online status,
+/// handling conflicts, and performing background syncs.
 ///
 /// Methods:
-/// - `deleteTask(String id)`: Deletes a task by its ID.
-/// - `getTask(String id)`: Retrieves a task by its ID.
-/// - `watchTasks()`: Watches for changes in the tasks and returns a stream of task lists.
-/// - `getAllTasks()`: Retrieves all tasks.
-/// - `addTask(Task task)`: Adds a new task and attempts to sync it with Firestore.
-/// - `updateTask(Task task)`: Updates an existing task and handles potential conflicts with Firestore.
+/// - `deleteTask(String id)`: Deletes a task by its ID from both local storage and Firestore.
+/// - `getTask(String id)`: Retrieves a task by its ID from local storage.
+/// - `watchTasks()`: Returns a stream of all tasks from local storage.
+/// - `getAllTasks()`: Retrieves all tasks from local storage.
+/// - `addTask(Task task)`: Adds a new task to local storage and attempts to sync it with Firestore.
+/// - `updateTask(Task task)`: Updates an existing task in local storage and attempts to sync it with Firestore.
+/// - `syncWithFirebase()`: Syncs tasks between local storage and Firestore, resolving conflicts.
+/// - `startBackgroundSync()`: Starts a background service to periodically sync unsynced tasks with Firestore.
 ///
 /// Private Methods:
-/// - `_handleConflict(Task remoteTask, Task localTask)`: Handles conflicts between local and remote tasks.
+/// - `_handleConflict(Task remoteTask, Task localTask)`: Handles conflicts between local and remote tasks, giving precedence to remote changes.
 /// - `_isOnline()`: Checks if the device is online by making a request to Google.
-///
-/// Additional Functionality:
-/// - `startBackgroundSync()`: Starts a background service to periodically sync unsynced tasks with Firestore.
 class TaskRepositoryImpl implements TaskRepository {
   @override
   Future<void> deleteTask(String id) async {
@@ -120,6 +125,59 @@ class TaskRepositoryImpl implements TaskRepository {
       return response.statusCode == 200;
     } catch (_) {
       return false;
+    }
+  }
+
+  @override
+  Future<void> syncWithFirebase() async {
+    try {
+      // Get all remote tasks
+      final snapshot = await _firestore.collection('tasks').get();
+      final remoteTasks =
+          snapshot.docs.map((doc) => Task.fromFirebase(doc.data())).toList();
+
+      // Get all local tasks
+      final localTasks = _taskBox.values.toList();
+
+      // Sync remote to local
+      for (final remoteTask in remoteTasks) {
+        final localTask = localTasks.firstWhere(
+          (lt) => lt.id == remoteTask.id,
+          orElse: () => Task(
+              id: '',
+              title: '',
+              description: '',
+              isSynced: false,
+              lastModified: DateTime.now()),
+        );
+
+        if ((remoteTask.lastModified.isAfter(localTask.lastModified))) {
+          await _taskBox.put(remoteTask.id, remoteTask);
+        }
+      }
+
+      // Sync local to remote
+      for (final localTask in localTasks) {
+        final remoteTask = remoteTasks.firstWhere(
+          (rt) => rt.id == localTask.id,
+          orElse: () => Task(
+              id: '',
+              title: '',
+              description: '',
+              isSynced: false,
+              lastModified: DateTime.now()),
+        );
+
+        if ((localTask.lastModified.isAfter(remoteTask.lastModified))) {
+          await _firestore
+              .collection('tasks')
+              .doc(localTask.id)
+              .set(localTask.toFirebase());
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to sync with Firebase: $e');
+      throw Exception('Failed to sync with Firebase');
     }
   }
 
