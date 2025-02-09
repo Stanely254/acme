@@ -38,7 +38,7 @@ A Flutter-based task management application with offline-first capabilities, imp
 1. Clone the repository:
 ```bash
 git clone https://github.com/Stanely254/acme.git
-cd task-management-app
+cd acme
 ```
 
 2. Install dependencies:
